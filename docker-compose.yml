@@ -1,0 +1,52 @@
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — primary datastore
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: github_metadata
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d github_metadata"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Application — FastAPI service
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: development
+      DEBUG: "false"
+      LOG_LEVEL: INFO
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/github_metadata
+      # Set your GitHub token here or in a .env file to avoid rate limiting.
+      # Create one at: https://github.com/settings/tokens (no scopes required)
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_REQUEST_TIMEOUT: "10.0"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Override the default command to run migrations before starting the server.
+    # In production, migrations would be a separate init container or CI step.
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  postgres_data:
