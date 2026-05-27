@@ -50,11 +50,8 @@ The fastest path to a running service:
 ```bash
 # Clone and start (PostgreSQL + migrations + API server — all-in-one)
 docker compose up --build
+
 ```
-
-The API is available at **http://localhost:8000** once the `app` container logs `application_startup`.  
-Interactive docs: **http://localhost:8000/docs**
-
 To run the test suite (requires a separate test database — see [Testing](#testing)):
 
 ```bash
